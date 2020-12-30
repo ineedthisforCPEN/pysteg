@@ -65,14 +65,14 @@ class TestStruct(unittest.TestCase):
     # Byte order test inputs
     INIT_BIG_ENDIAN = collections.OrderedDict({
         "foo": {
-            "type":     ">Q",
+            "type":     ">L",
             "default":  1,
             "help":     "Big-endian long long",
         }
     })
     INIT_LITTLE_ENDIAN = collections.OrderedDict({
         "foo": {
-            "type":     "<Q",
+            "type":     "<L",
             "default":  1,
             "help":     "Little-endian long long",
         }
@@ -365,6 +365,16 @@ class TestStruct(unittest.TestCase):
         self.assertEqual(mt_struct.pickle(), b"\x01\x00\x00\x00string\x00\x00")
         self.assertEqual(cp_struct.pickle(),
                          b"\x01\x00\x00\x00string\x00\x00nested\x00\x00")
+
+    def test_struct_pickle_byte_order(self):
+        """Test that byte order is maintained when pickling a
+        Struct.
+        """
+        be_struct = Struct(self.INIT_BIG_ENDIAN)
+        le_struct = Struct(self.INIT_LITTLE_ENDIAN)
+
+        self.assertEqual(be_struct.pickle(), b"\x00\x00\x00\x01")
+        self.assertEqual(le_struct.pickle(), b"\x01\x00\x00\x00")
 
     def test_struct_calcsize(self):
         """Test that calcsize returns the correct Struct size."""
