@@ -26,6 +26,7 @@ Features:
         - Cannot add new fields during runtime
         - Cannod delete fields during runtime
     - 'pickle' method pickles the Struct to a bytes array
+    - 'calcsize' method calculates the Struct size in bytes
     - Fields that are strings are automatically truncated or padded
         when updated in a Struct
     - Fields that are string have any trailing null characters stripped
@@ -234,6 +235,26 @@ class Struct(dict):
         else:
             self._store[key]["value"] = struct.pack(fmt, value)
 
+    def calcsize(self):
+        """Calculate the Struct size in bytes.
+
+        Parameters:
+            None
+
+        Return:
+            Size of the Struct in bytes.
+        """
+        size = 0
+        for field in self._store:
+            ftype = self._store[field]["type"]
+
+            if isinstance(ftype, Struct):
+                size += ftype.calcsize()
+            else:
+                size += struct.calcsize(ftype)
+
+        return size
+
     def pickle(self):
         """Pickle the Struct object into a byte array.
 
@@ -245,11 +266,11 @@ class Struct(dict):
         """
         pickled = b""
         for field in self._store:
-            val = self._store[field]["value"]
+            fvalue = self._store[field]["value"]
 
-            if isinstance(val, Struct):
-                pickled += val.pickle()
+            if isinstance(fvalue, Struct):
+                pickled += fvalue.pickle()
             else:
-                pickled += val
+                pickled += fvalue
 
         return pickled

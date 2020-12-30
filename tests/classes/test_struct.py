@@ -366,6 +366,26 @@ class TestStruct(unittest.TestCase):
         self.assertEqual(cp_struct.pickle(),
                          b"\x01\x00\x00\x00string\x00\x00nested\x00\x00")
 
+    def test_struct_calcsize(self):
+        """Test that calcsize returns the correct Struct size."""
+        i_struct = Struct(self.INIT_INT)
+        f_struct = Struct(self.INIT_FLOAT)
+        c_struct = Struct(self.INIT_CHAR)
+        s_struct = Struct(self.INIT_STRING)
+
+        ms_struct = Struct(self.INIT_MIXED_SIZE)
+        mt_struct = Struct(self.INIT_MIXED_TYPE)
+        cp_struct = Struct(self.INIT_COMPLEX)
+
+        self.assertEqual(i_struct.calcsize(), 4)
+        self.assertEqual(f_struct.calcsize(), 4)
+        self.assertEqual(c_struct.calcsize(), 1)
+        self.assertEqual(s_struct.calcsize(), 8)
+
+        self.assertEqual(ms_struct.calcsize(), 7)
+        self.assertEqual(mt_struct.calcsize(), 12)
+        self.assertEqual(cp_struct.calcsize(), 20)
+
     def test_struct_string(self):
         """Test automatic string manipulation works as expected."""
         test_struct = Struct(self.INIT_STRING)
