@@ -37,7 +37,7 @@ class TestStruct(unittest.TestCase):
         self.assertEqual(ndims(1, "1:1:1"), (1, 1, 1,))
         self.assertEqual(ndims(2, "1:1:1"), (2, 2, 2,))
         self.assertEqual(ndims(2, "1:1:2"), (1, 1, 2,))
-        self.assertEqual(ndims(4, "1:1:1"), (2, 2, 4,))
+        self.assertEqual(ndims(4, "1:1:1"), (2, 2, 2,))
         self.assertEqual(ndims(8, "1:1:1"), (2, 2, 2,))
         self.assertEqual(ndims(8, "1:2:4"), (1, 2, 4,))
         self.assertEqual(ndims(11, "1:1:11"), (1, 1, 11,))
