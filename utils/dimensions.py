@@ -1,4 +1,7 @@
 """dimensions.py
+
+Calculate an n-dimensional volume that is optimized to fit a given size
+and ratio.
 """
 
 
