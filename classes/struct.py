@@ -85,8 +85,8 @@ class Struct(dict):
         # Parameter validation and sanitation is complete, start setting up
         # the object structure and validate the internal store.
         self._store = collections.OrderedDict(copy.deepcopy(fields))
-        self._structname = structname
-        self.helpstring = f"{self._structname} details\n"
+        self.structname = structname
+        self.helpstring = f"{self.structname} details\n"
 
         self.__update_and_validate_store()
         self.__update_helpstring()
@@ -105,10 +105,10 @@ class Struct(dict):
         Return:
             None
         """
-        self._structname = structname
+        self.structname = structname
         self._store = copy.deepcopy(original._store)
-        self.helpstring = original.helpstring.replace(original._structname,
-                                                      self._structname)
+        self.helpstring = original.helpstring.replace(original.structname,
+                                                      self.structname)
 
     def __update_and_validate_store(self):
         """Update and validate the internal Struct store. Validation
@@ -119,7 +119,7 @@ class Struct(dict):
         for field in self._store:
             # Create a detailed field name string for better exception and
             # warning messages.
-            fieldname = f"{self._structname}.{field}"
+            fieldname = f"{self.structname}.{field}"
 
             # Validate the field type. Ensure that it exists, is the expected
             # type, and is a valid struct format string.
@@ -192,7 +192,7 @@ class Struct(dict):
         immutable after initialization.
         """
         raise NotImplementedError("Cannot delete fields from "
-                                  + f"{self._structname}")
+                                  + f"{self.structname}")
 
     def __getitem__(self, key):
         """Custom __getitem__ implementation that automatically unpacks
@@ -209,7 +209,7 @@ class Struct(dict):
         """
         # Automatically unpack an item when accessed.
         if key not in self._store:
-            raise KeyError(f"Struct '{self._structname}'"
+            raise KeyError(f"Struct '{self.structname}'"
                            + f" - cannot find '{key}' field"
                            + " - does not exist")
 
@@ -249,7 +249,7 @@ class Struct(dict):
         don't need to be accessed in reverse.
         """
         # Structs shouldn't be reversed.
-        raise NotImplementedError(f"Cannot reverse Struct {self._structname}")
+        raise NotImplementedError(f"Cannot reverse Struct {self.structname}")
 
     def __setitem__(self, key, value):
         """Custom __setitem__ implementation that automatically packs
@@ -269,7 +269,7 @@ class Struct(dict):
         """
         # Automatically pack an item when set.
         if key not in self._store:
-            raise KeyError(f"Struct '{self._structname}'"
+            raise KeyError(f"Struct '{self.structname}'"
                            + f" - cannot set '{key}' field"
                            + " - does not exist")
 
@@ -279,7 +279,7 @@ class Struct(dict):
             if isinstance(value, Struct):
                 self._store[key] = value
             else:
-                raise TypeError(f"'{self._structname}.{key}' is type 'Struct'")
+                raise TypeError(f"'{self.structname}.{key}' is type 'Struct'")
         else:
             self._store[key]["value"] = struct.pack(fmt, value)
 
