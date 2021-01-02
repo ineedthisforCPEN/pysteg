@@ -46,9 +46,17 @@ import collections
 import copy
 import re
 import struct
+import textwrap
 import warnings
 
 
+# Set default values for different types.
+_DEFAULT_NUMBER = 0
+_DEFAULT_STRING = b""
+
+# Regular expressions for determining simple struct types.
+# See documentation for 'struct' library for valid types. Note that some types
+# (like bool, pad, and some floats) are not supported for arbitrary reasons.
 _RE_STRUCT_NUMBER_RAW = r"^[@=<>!]?[\?bBdfhHiIlLnNqQ]$"
 _RE_STRUCT_STRING_RAW = r"^[@=<>!]?(\d)*[cs]$"
 
@@ -58,7 +66,7 @@ _RE_STRUCT_STRING = re.compile(_RE_STRUCT_STRING_RAW)
 
 class Struct(dict):
     def __init__(self, fields, structname=None):
-        # Basic validation and update initialization parameters
+        # Type validations and init parameter sanitation.
         if not isinstance(fields, dict):
             raise TypeError("Must initialized Struct with a dict-like object")
 
@@ -67,9 +75,15 @@ class Struct(dict):
 
         # Check for initialization special cases
         if type(fields) is Struct:
+            # One special case is initializing a Struct with another struct.
+            # The behaviour is to copy the initialization struct's content,
+            # but modify the struct name if required. The copy initialization
+            # performs all object structure setup and store validation.
             self.__copy_init(fields, structname)
             return
 
+        # Parameter validation and sanitation is complete, start setting up
+        # the object structure and validate the internal store.
         self._store = collections.OrderedDict(copy.deepcopy(fields))
         self._structname = structname
         self.helpstring = f"{self._structname} details\n"
@@ -77,23 +91,34 @@ class Struct(dict):
         self.__update_and_validate_store()
         self.__update_helpstring()
 
-    def __copy_init(self, original, newname):
-        """Initialize the Struct by making a copy of another Struct.
+    def __copy_init(self, original, structname):
+        """Initialize the Struct by copying another existing Struct
+        into this new Struct object. The new Struct can be given a new
+        structname.
+
+        Initialize the Struct by making a copy of another Struct.
 
         Parameters:
             original    Original Struct object to copy
-            newname     New structname for the new Struct
+            structname  New structname for the new Struct
 
         Return:
             None
         """
-        self._structname = original._structname if newname is None else newname
+        self._structname = structname
         self._store = copy.deepcopy(original._store)
         self.helpstring = original.helpstring.replace(original._structname,
                                                       self._structname)
 
     def __update_and_validate_store(self):
+        """Update and validate the internal Struct store. Validation
+        ensures all fields in the store have a supported type. Update
+        sets that internal value of that field that can be modified
+        later.
+        """
         for field in self._store:
+            # Create a detailed field name string for better exception and
+            # warning messages.
             fieldname = f"{self._structname}.{field}"
 
             # Validate the field type. Ensure that it exists, is the expected
@@ -126,35 +151,48 @@ class Struct(dict):
 
             if fvalue is None:
                 if _RE_STRUCT_NUMBER.match(ftype):
-                    fvalue = 0
+                    fvalue = _DEFAULT_NUMBER
                     warnings.warn(f"{fieldname} missing default value - "
                                   + f"setting value to '{fvalue}'")
                 else:
-                    fvalue = b""
+                    fvalue = _DEFAULT_STRING
                     warnings.warn(f"{fieldname} missing default value - "
                                   + f"setting value to '{fvalue}'")
 
             self._store[field]["value"] = struct.pack(ftype, fvalue)
 
             # Warn users if there is no help information for the field.
-            fhelp = self._store[field].get("help")
+            fhelp = self._store[field].get("help", "")
 
             if fhelp == "":
                 warnings.warn(f"{fieldname} missing optional help text")
 
     def __update_helpstring(self):
+        """Update the help string by reading each field's help info and
+        append it to the currently existing help string.
+        """
         helpwidth = max(len(field) for field in self._store)
 
         for field in self._store:
-            fhelp = self._store[field].get("help", "[No details]")
+            obj = self._store[field]
+
+            fhelp = obj.get("help", "[No details]")
             self.helpstring += f"  {field:<{helpwidth}} -- {fhelp}\n"
 
+            if isinstance(obj["type"], Struct):
+                self.helpstring += textwrap.indent(obj["type"].helpstring,
+                                                   "    ")
+
     def __contains__(self, item):
+        """Pass all __contains__ calls to the internal store."""
         return self._store.__contains__(item)
 
     def __delitem__(self, key):
-        errmsg = f"Cannot delete keys from '{self._structname}'"
-        raise NotImplementedError(errmsg)
+        """Prevent any fields from being deleted - Struct is
+        immutable after initialization.
+        """
+        raise NotImplementedError("Cannot delete fields from "
+                                  + f"{self._structname}")
 
     def __getitem__(self, key):
         """Custom __getitem__ implementation that automatically unpacks
@@ -179,16 +217,22 @@ class Struct(dict):
         val = self._store[key]["value"]
 
         if not isinstance(fmt, str):
+            # The field's type is Struct - no need to unpack this value, we can
+            # just return the whole Struct.
             return val
         elif _RE_STRUCT_STRING.match(fmt) is not None:
+            # Unpack any strings and remove padding.
             return b"".join(struct.unpack(fmt, val)).rstrip(b"\x00")
         else:
+            # Treat everything else as a single number.
             return struct.unpack(fmt, val)[0]
 
     def __iter__(self):
+        """Pass all __iter__ calls to the internal store."""
         return self._store.__iter__()
 
     def __len__(self):
+        """Pass all __len__ calls to the internal store."""
         return self._store.__len__()
 
     def __missing__(self, key):
@@ -197,9 +241,13 @@ class Struct(dict):
         raise NotImplementedError()
 
     def __next__(self):
+        """Pass all __next__ calls to the internal store."""
         return self._store.__next__()
 
     def __reversed__(self):
+        """Prevent any fields from being reversed. The Struct fields
+        don't need to be accessed in reverse.
+        """
         # Structs shouldn't be reversed.
         raise NotImplementedError(f"Cannot reverse Struct {self._structname}")
 
