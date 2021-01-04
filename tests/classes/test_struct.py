@@ -345,6 +345,15 @@ class TestStruct(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             del test_struct["foo"]
 
+    def test_struct_load(self):
+        """Test that Struct loading works as expected."""
+        test_struct = Struct(self.INIT_COMPLEX)
+        test_struct.load(b"\xFF\xFF\x00\x00abcdefghhgfedcba")
+
+        self.assertEqual(test_struct["foo"], 0xFFFF)
+        self.assertEqual(test_struct["bar"], b"abcdefgh")
+        self.assertEqual(test_struct["baz"]["nested"], b"hgfedcba")
+
     def test_struct_pickle(self):
         """Test that Struct pickling works as expected."""
         i_struct = Struct(self.INIT_INT)
@@ -376,8 +385,8 @@ class TestStruct(unittest.TestCase):
         self.assertEqual(be_struct.pickle(), b"\x00\x00\x00\x01")
         self.assertEqual(le_struct.pickle(), b"\x01\x00\x00\x00")
 
-    def test_struct_calcsize(self):
-        """Test that calcsize returns the correct Struct size."""
+    def test_struct_size(self):
+        """Test that size field is the correct Struct size."""
         i_struct = Struct(self.INIT_INT)
         f_struct = Struct(self.INIT_FLOAT)
         c_struct = Struct(self.INIT_CHAR)
@@ -387,14 +396,14 @@ class TestStruct(unittest.TestCase):
         mt_struct = Struct(self.INIT_MIXED_TYPE)
         cp_struct = Struct(self.INIT_COMPLEX)
 
-        self.assertEqual(i_struct.calcsize(), 4)
-        self.assertEqual(f_struct.calcsize(), 4)
-        self.assertEqual(c_struct.calcsize(), 1)
-        self.assertEqual(s_struct.calcsize(), 8)
+        self.assertEqual(i_struct.size, 4)
+        self.assertEqual(f_struct.size, 4)
+        self.assertEqual(c_struct.size, 1)
+        self.assertEqual(s_struct.size, 8)
 
-        self.assertEqual(ms_struct.calcsize(), 7)
-        self.assertEqual(mt_struct.calcsize(), 12)
-        self.assertEqual(cp_struct.calcsize(), 20)
+        self.assertEqual(ms_struct.size, 7)
+        self.assertEqual(mt_struct.size, 12)
+        self.assertEqual(cp_struct.size, 20)
 
     def test_struct_string(self):
         """Test automatic string manipulation works as expected."""

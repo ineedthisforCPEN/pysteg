@@ -26,7 +26,7 @@ Features:
         - Cannot add new fields during runtime
         - Cannod delete fields during runtime
     - 'pickle' method pickles the Struct to a bytes array
-    - 'calcsize' method calculates the Struct size in bytes
+    - 'size' field contains the Struct size in bytes
     - Fields that are strings are automatically truncated or padded
         when updated in a Struct
     - Fields that are string have any trailing null characters stripped
@@ -90,6 +90,27 @@ class Struct(dict):
 
         self.__update_and_validate_store()
         self.__update_helpstring()
+        self.size = self.__calcsize()
+
+    def __calcsize(self):
+        """Calculate the Struct size in bytes.
+
+        Parameters:
+            None
+
+        Return:
+            Size of the Struct in bytes.
+        """
+        size = 0
+        for field in self._store:
+            ftype = self._store[field]["type"]
+
+            if isinstance(ftype, Struct):
+                size += ftype.size
+            else:
+                size += struct.calcsize(ftype)
+
+        return size
 
     def __copy_init(self, original, structname):
         """Initialize the Struct by copying another existing Struct
@@ -283,25 +304,34 @@ class Struct(dict):
         else:
             self._store[key]["value"] = struct.pack(fmt, value)
 
-    def calcsize(self):
-        """Calculate the Struct size in bytes.
+    def load(self, raw):
+        """Load all fields of a Struct from a pickled byte string.
 
         Parameters:
-            None
+            raw     Raw pickled byte string to load into the Struct
 
         Return:
-            Size of the Struct in bytes.
+            None
+
+        Raises:
+            ValueError
         """
-        size = 0
+        if len(raw) != self.size:
+            raise ValueError("Loaded string is not the right size "
+                             + f"({self.size} bytes)")
+
+        offset = 0
         for field in self._store:
             ftype = self._store[field]["type"]
 
             if isinstance(ftype, Struct):
-                size += ftype.calcsize()
+                fsize = ftype.size
+                self._store[field]["value"].load(raw[offset:offset + fsize])
+                offset += fsize
             else:
-                size += struct.calcsize(ftype)
-
-        return size
+                fsize = struct.calcsize(ftype)
+                self._store[field]["value"] = raw[offset:offset + fsize]
+                offset += fsize
 
     def pickle(self):
         """Pickle the Struct object into a byte array.
